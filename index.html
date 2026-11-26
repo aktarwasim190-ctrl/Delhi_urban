@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#142a2c"><title>Delhi Urban Atlas · 1995–2025</title>
 <style>body{margin:0;background:#142a2c;color:#f5f5ee;font:16px/1.6 system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}main{max-width:520px;padding:32px}h1{font-size:clamp(32px,6vw,54px);line-height:1.05;margin:16px 0}small{letter-spacing:.16em;color:#c1d7c8}progress{width:100%;height:8px;accent-color:#d4ad75}a{color:#e8c38f}p{color:#c1d7c8}button{font:inherit;padding:10px 18px;border:0;border-radius:7px;background:#e8c38f;color:#142a2c;cursor:pointer}</style></head>
-<body><main><small>INTERACTIVE GEOSPATIAL ATLAS</small><h1>Delhi Urban Atlas<br>1995–2025</h1><p id="status" role="status" aria-live="polite">Loading the original research maps and analytical layers…</p><progress id="progress" max="1"></progress><p id="detail">56 GIS layers · 12 layouts · 30 years</p><button id="retry" hidden onclick="location.reload()">Retry</button><p><a href="./Delhi_Urban_Atlas_Lite.zip" download>Download the original offline atlas</a></p></main>
+<body><main><small>INTERACTIVE GEOSPATIAL ATLAS</small><h1>Delhi Urban Atlas<br>1995–2025</h1><p id="status" role="status" aria-live="polite">Loading the 3D India–Delhi atlas and original research layers…</p><progress id="progress" max="1"></progress><p id="detail">56 GIS layers · 12 layouts · 30 years</p><button id="retry" hidden onclick="location.reload()">Retry</button><p><a href="./Delhi_Urban_Atlas_Lite.zip" download>Download the original offline atlas</a></p></main>
 <script>
 (async function(){
   const status=document.getElementById('status'), progress=document.getElementById('progress'), detail=document.getElementById('detail');
@@ -47,6 +47,7 @@
       const marker='src="'+name+'"';if(!page.includes(marker))throw new Error('Missing script reference: '+name);
       page=page.replace(marker,'src="'+url+'"');detail.textContent='Prepared '+(i+1)+' of '+scripts.length+' data files';
     }
+    page=page.replace('</body>', '<script src="./atlas-v2.js?v=2"><'+'/script></body>');
     document.open();document.write(page);document.close();
   }catch(err){status.textContent='Unable to load the atlas: '+err.message;detail.textContent='Please retry or download the original offline atlas.';progress.hidden=true;document.getElementById('retry').hidden=false;}
 })();
