@@ -47,7 +47,7 @@
       const marker='src="'+name+'"';if(!page.includes(marker))throw new Error('Missing script reference: '+name);
       page=page.replace(marker,'src="'+url+'"');detail.textContent='Prepared '+(i+1)+' of '+scripts.length+' data files';
     }
-    page=page.replace('</body>', '<script src="./atlas-v2.js?v=2"><'+'/script></body>');
+    page=page.replace('</body>', '<script src="./atlas-v2.js?v=3"><'+'/script></body>');
     document.open();document.write(page);document.close();
   }catch(err){status.textContent='Unable to load the atlas: '+err.message;detail.textContent='Please retry or download the original offline atlas.';progress.hidden=true;document.getElementById('retry').hidden=false;}
 })();
