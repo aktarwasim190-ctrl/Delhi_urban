@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#142a2c"><title>Delhi Urban Atlas · 1995–2025</title>
+<style>body{margin:0;background:#142a2c;color:#f5f5ee;font:16px/1.6 system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}main{max-width:520px;padding:32px}h1{font-size:clamp(32px,6vw,54px);line-height:1.05;margin:16px 0}small{letter-spacing:.16em;color:#c1d7c8}progress{width:100%;height:8px;accent-color:#d4ad75}a{color:#e8c38f}p{color:#c1d7c8}button{font:inherit;padding:10px 18px;border:0;border-radius:7px;background:#e8c38f;color:#142a2c;cursor:pointer}</style></head>
+<body><main><small>INTERACTIVE GEOSPATIAL ATLAS</small><h1>Delhi Urban Atlas<br>1995–2025</h1><p id="status" role="status" aria-live="polite">Loading the original research maps and analytical layers…</p><progress id="progress" max="1"></progress><p id="detail">56 GIS layers · 12 layouts · 30 years</p><button id="retry" hidden onclick="location.reload()">Retry</button><p><a href="./Delhi_Urban_Atlas_Lite.zip" download>Download the original offline atlas</a></p></main>
+<script>
+(async function(){
+  const status=document.getElementById('status'), progress=document.getElementById('progress'), detail=document.getElementById('detail');
+  const decoder=new TextDecoder();
+  const scripts=['atlas-data.js','atlas-layers-1.js','atlas-layers-2.js','atlas-layers-3.js','atlas-layers-4.js'];
+  try {
+    if(!('DecompressionStream' in window)) throw new Error('Use a current Chrome, Edge, Firefox or Safari browser.');
+    const response=await fetch('./Delhi_Urban_Atlas_Lite.zip');
+    if(!response.ok) throw new Error('Atlas archive unavailable (HTTP '+response.status+').');
+    const total=Number(response.headers.get('content-length'))||0;
+    let buffer;
+    if(response.body&&total){
+      const reader=response.body.getReader(), chunks=[]; let size=0;
+      progress.value=0;
+      for(;;){const {done,value}=await reader.read();if(done)break;chunks.push(value);size+=value.byteLength;progress.value=Math.min(1,size/total);detail.textContent=(size/1048576).toFixed(1)+' MB downloaded';}
+      const all=new Uint8Array(size);let offset=0;for(const chunk of chunks){all.set(chunk,offset);offset+=chunk.length;}buffer=all.buffer;
+    }else buffer=await response.arrayBuffer();
+    status.textContent='Preparing interactive GIS layers…';progress.removeAttribute('value');
+    const data=new Uint8Array(buffer), view=new DataView(buffer);
+    let end=-1;for(let i=data.length-22;i>=Math.max(0,data.length-65557);i--){if(view.getUint32(i,true)===0x06054b50&&i+22+view.getUint16(i+20,true)===data.length){end=i;break;}}
+    if(end<0)throw new Error('Invalid ZIP archive.');
+    const entries=new Map();let pos=view.getUint32(end+16,true), count=view.getUint16(end+10,true);
+    for(let i=0;i<count;i++){
+      if(view.getUint32(pos,true)!==0x02014b50)throw new Error('Invalid ZIP directory.');
+      const method=view.getUint16(pos+10,true), packed=view.getUint32(pos+20,true), size=view.getUint32(pos+24,true), n=view.getUint16(pos+28,true), extra=view.getUint16(pos+30,true), comment=view.getUint16(pos+32,true), local=view.getUint32(pos+42,true);
+      const name=decoder.decode(data.subarray(pos+46,pos+46+n));entries.set(name,{method,packed,size,local});pos+=46+n+extra+comment;
+    }
+    async function extract(name){
+      const e=entries.get(name);if(!e)throw new Error('Missing atlas file: '+name);
+      if(view.getUint32(e.local,true)!==0x04034b50)throw new Error('Invalid local ZIP entry.');
+      const start=e.local+30+view.getUint16(e.local+26,true)+view.getUint16(e.local+28,true);
+      const compressed=data.subarray(start,start+e.packed);
+      let result;
+      if(e.method===0)result=compressed;
+      else if(e.method===8)result=new Uint8Array(await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+      else throw new Error('Unsupported ZIP compression.');
+      if(result.byteLength!==e.size)throw new Error('Incomplete atlas file: '+name);
+      return result;
+    }
+    let page=decoder.decode(await extract('index.html'));
+    for(let i=0;i<scripts.length;i++){
+      const name=scripts[i], bytes=await extract(name), url=URL.createObjectURL(new Blob([bytes],{type:'text/javascript'}));
+      const marker='src="'+name+'"';if(!page.includes(marker))throw new Error('Missing script reference: '+name);
+      page=page.replace(marker,'src="'+url+'"');detail.textContent='Prepared '+(i+1)+' of '+scripts.length+' data files';
+    }
+    document.open();document.write(page);document.close();
+  }catch(err){status.textContent='Unable to load the atlas: '+err.message;detail.textContent='Please retry or download the original offline atlas.';progress.hidden=true;document.getElementById('retry').hidden=false;}
+})();
+</script></body></html>
